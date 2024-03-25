@@ -22,19 +22,3 @@ This repository is to support the "Improve Your Business Step by Step: Practical
 - Run `pip install -r requirements.txt`
 - Copy .env.example file into .env file and fill in the required keys
 
-
-
-## Materials Provided
-
-- Workshop slides and materials
-- Access to LLM platforms for hands-on exercises
-- Guides and resources for further learning
-
-## How to Prepare
-
-- Review basic AI and machine learning concepts
-- Think about business challenges that could benefit from AI solutions
-- Install required software and tools as instructed in the pre-workshop materials
-
-Join us for this interactive workshop to explore how Large Language Models can revolutionize your business processes, step by step. We look forward to helping you harness the power of LLMs to achieve your business goals!
-
