@@ -1,0 +1,6 @@
+weave==0.43.0
+anthropic==0.20.0
+ipython
+ipykernel
+python-dotenv
+
