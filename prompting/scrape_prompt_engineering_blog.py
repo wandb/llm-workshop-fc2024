@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 
 def element_to_markdown(element):
     """Convert an HTML element to Markdown."""
@@ -49,13 +50,26 @@ def scrape_to_markdown(url):
 
 def main():
     # URL of the page to scrape
-    url = 'https://aman.ai/primers/ai/prompt-engineering/'
+    urls = [
+        'https://aman.ai/primers/ai/prompt-engineering/',
+        'https://lilianweng.github.io/posts/2023-03-15-prompt-engineering/#instruction-prompting',
+    ]
 
     # Get the Markdown formatted content
-    markdown_content = scrape_to_markdown(url)
+    for url in urls:
+        print(f"Scraping {url}")
+        markdown_content = scrape_to_markdown(url)
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc.split('.')[0]
+        if domain.startswith('www'):
+            blog = domain[4:]
+        else:
+            blog = domain
+        # Optionally, save the Markdown content to a file
+        with open(f"{blog}_prompt_engineering.md", 'w', encoding='utf-8') as file:
+            file.write(markdown_content)
 
-    # Optionally, save the Markdown content to a file
-    with open('prompt_engineering.md', 'w', encoding='utf-8') as file:
-        file.write(markdown_content)
+        print(f"Markdown content saved to prompt_engineering.md for {url}")
 
-    print("Markdown content saved to prompt_engineering.md")
+if __name__ == '__main__':
+    main()
