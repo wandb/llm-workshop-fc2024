@@ -20,7 +20,7 @@ def escape_xml_tags(text):
     text = text.replace("<", "\n&lt;").replace(">", "&gt;\n")
     return text
 
-def render(md_text, markdown=True):
+def render(md_text, markdown=False):
     if markdown:
         display_markdown(Markdown(escape_xml_tags(md_text)))
     else:
