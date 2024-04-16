@@ -4,12 +4,12 @@
 This repository is to support the "Improve Your Business Step by Step: Practical Use of LLMs" Workshop during Fully Connected 2024 conference by Weights & Biases 
 
 ## Colab Links 
-### Part 1 prompting - <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_1_prompting/prompt_engineering.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg\" alt="Open In Colab"/></a>
+### Part 1 prompting - <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_1_prompting/prompt_engineering.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 <!--- @wandbcode{llm-workshop-fc2024-prompting} -->
 
 ### Part 2 - Structured Outputs 
 
-### Part 3 -  <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_3_evaluations/lets_do_evals.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg\" alt="Open In Colab"/></a>
+### Part 3 -  <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_3_evaluations/lets_do_evals.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 <!--- @wandbcode{llm-workshop-fc2024-evaluations} -->
 
 
