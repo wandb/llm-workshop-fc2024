@@ -7,7 +7,8 @@ This repository is to support the "Improve Your Business Step by Step: Practical
 ### Part 1 - Prompting - <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_1_prompting/prompt_engineering.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 <!--- @wandbcode{llm-workshop-fc2024-prompting} -->
 
-### Part 2 - Structured Outputs 
+### Part 2 - Structured Outputs - <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_2_structured_outputs/LLM%20Clustering%20and%20Structured%20Outputs.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+<!--- @wandbcode{llm-workshop-fc2024-evaluations} -->
 
 ### Part 3 - LLM Evaluations - <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_3_evaluations/lets_do_evals.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 <!--- @wandbcode{llm-workshop-fc2024-evaluations} -->
