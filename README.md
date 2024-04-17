@@ -35,4 +35,4 @@ This repository is to support the "Improve Your Business Step by Step: Practical
 
 ## Presentation Slides
 
-### Part 1 - Prompting - [Slides]()
+### Part 1 - Prompting - [Slides](http://wandb.me/fc24workshopps)
