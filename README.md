@@ -18,7 +18,6 @@ This repository is to support the "Improve Your Business Step by Step: Practical
 
 - A basic understanding of Python (and a clean environment) 
 - Claude 3 API key - Create an account  ([in Anthropic Console](https://console.anthropic.com/workbench/38727684-8c5a-4116-a3c7-04d1c6010f8c))
-- If you aren't able to register, take our temporary API key from [here](https://share.1password.com/s#-YtCaU_pSTaH0dODKzAP4t4lJazU1mPG7gmPec7OvjE) 
 - Weights & Biases API key - Create an account  ([in W&B Console](https://wandb.ai/authorize?utm_source=llm-workshop&utm_medium=event&utm_campaign=llm-workshop))
 
 
