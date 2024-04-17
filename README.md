@@ -35,9 +35,7 @@ This repository is to support the "Improve Your Business Step by Step: Practical
 - Copy .env.example file into .env file and fill in the required keys
 
 
-## Presentation Slides
-
-### Part 1 - Prompting - [Slides](http://wandb.me/fc24workshopps)
+## [Presentation Slides](http://wandb.me/fc24workshopslides)
 
 ## Resources
 
