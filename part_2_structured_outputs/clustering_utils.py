@@ -1,35 +1,27 @@
 from sentence_transformers import SentenceTransformer
 import umap
-import numpy as np
 import hdbscan
-import sklearn.manifold
-import numpy as np
-import random
 import pandas as pd
-from bokeh.models import ColumnDataSource, HoverTool, LinearColorMapper, CategoricalColorMapper
-from bokeh.palettes import plasma, d3, Turbo256
+import random
+from bokeh.models import ColumnDataSource, HoverTool, CategoricalColorMapper
+from bokeh.palettes import Turbo256
 from bokeh.plotting import figure
 from bokeh.transform import transform
 import bokeh.plotting as bpl
 import instructor
 from openai import OpenAI, AsyncOpenAI
-from typing import List, Annotated
 import weave
-from pprint import pprint
-from typing import Iterable
-from enum import Enum
-from typing_extensions import Literal
-from tqdm.auto import tqdm
 import asyncio 
-from pydantic import ValidationInfo
-from pydantic import BaseModel, AfterValidator, WithJsonSchema, Field
+from pydantic import BaseModel, Field
+from typing import List
 
 from clustering_prompts import clustering_prompt, cluster_cleanup_prompt, cluster_refine_prompt_create_true, cluster_refine_prompt_create_false
 
 aclient = instructor.from_openai(AsyncOpenAI())
 client = instructor.from_openai(OpenAI())
+weave.init('llm-clustering')
 
-
+# Function to cluster texts and return embeddings for visualization
 def cluster_texts(texts, model='sentence-transformers/all-MiniLM-L12-v2'):
     model = SentenceTransformer(model)
     embeddings = model.encode(texts)
@@ -39,14 +31,14 @@ def cluster_texts(texts, model='sentence-transformers/all-MiniLM-L12-v2'):
     cluster_labels = clusterer.fit_predict(umap_embeddings)
     return cluster_labels, umap_embeddings
 
+# Function to visualize the clusters
 def visualize(texts, categories, embeddings):
     bpl.output_notebook()
     list_x = embeddings[:,0]
     list_y = embeddings[:,1]
-    categories = [str(x) for x in categories] # required by color mapper
+    categories = [str(x) for x in categories]
     clrs = random.sample(Turbo256, len(set(categories)), )
     color_map = CategoricalColorMapper(factors=list(set(categories)), palette=clrs)
-    
     source = ColumnDataSource(data=dict(x=list_x, y=list_y, desc=texts, cat=categories))
     hover = HoverTool(tooltips=[
         ("index", "$index"),
@@ -65,6 +57,7 @@ def visualize(texts, categories, embeddings):
     p.circle('x', 'y', size=5, source=source, fill_color=transform('cat', color_map),)
     bpl.show(p)
 
+# Function to select a subset of clusters and wrap them in xml format
 def cluster_examples(df, cid, n=5):
     descriptions = [x for x,y in zip(df.description, df.cluster_id) if y == cid]
     descriptions = random.choices(descriptions, k=n)
@@ -74,10 +67,12 @@ def cluster_examples(df, cid, n=5):
         out.append(s)
     return '\n'.join(out)
 
+# Pydantic model for cluster name
 class Cluster(BaseModel):
-    chain_of_thought: str = Field(..., description="Think step by step to come up with a cluster name")
+    chain_of_thought: str = Field(description="Think step by step to come up with a cluster name")
     name: str
 
+# Function to name a cluster based on examples
 @weave.op()
 async def name_cluster(df, cluster_id):
     cluster = await aclient.chat.completions.create(
@@ -93,10 +88,7 @@ async def name_cluster(df, cluster_id):
     )
     return cluster
 
-# for each cluster, extract 5 descriptions, ask LLM to name the cluster
-# for all cluster names, ask LLM to make any corrections or add more names to make the list complete
-# for each company / description and original cluster, given all clusters, choose a cluster or add a new cluster to the list
-
+# Function to name all clusters in a dataframe
 @weave.op()
 async def name_clusters(df):
     cluster_ids = [x for x in df.cluster_id.unique() if x != -1]
@@ -104,7 +96,6 @@ async def name_clusters(df):
         *[name_cluster(df, cluster_id) for cluster_id in cluster_ids]
     )
     return [cluster.name for cluster in cluster_names]
-
 
 # function to put all cluster names in xml format
 def wrap_cluster_names(cnames):
@@ -114,13 +105,12 @@ def wrap_cluster_names(cnames):
         out.append(s)
     return '\n'.join(out)
 
+# Pydantic model for unique clusters
 class UniqueClusters(BaseModel):
     chain_of_thought: str = Field(description="Think step by step before cleaning up the clusters")
-    names: List[str] = Field(
-        ...,
-        description="List of deduplicated and cleaned up cluster names",
-    )
+    names: List[str] = Field(description="List of deduplicated and cleaned up cluster names")
 
+# Function to deduplicate cluster names
 @weave.op()
 def _dedup_names(cluster_names):
     cluster_names_str = wrap_cluster_names(cluster_names)
@@ -137,6 +127,7 @@ def _dedup_names(cluster_names):
     )
     return clean_clusters.names
 
+# Function to deduplicate cluster names that will split large inputs into sub-clusters
 @weave.op()
 def dedup_cluster_names(cluster_names):
     if len(cluster_names) < 100:
@@ -150,66 +141,28 @@ def dedup_cluster_names(cluster_names):
             new_names.extend(clean_subset)
         return _dedup_names(new_names)
                 
-
+# Pydantic model for cluster assignment
 class ClusterAssignment(BaseModel):
     chain_of_thought: str = Field(description="Think step by step then assign description to existing cluster or create a new one")
     cluster_name: str
     
-def cluster_exists(v: str, info: ValidationInfo):
-    context = info.context
-    if context:
-        context = context.get("existing_clusters")
-        if v not in context:
-            raise ValueError(f"Assigned cluster `{v}` not found in existing clusters provided by the user, only use provided clusters exactly.")
-    return v
-
-ClusterAssignmentValidated = Annotated[
-    str,
-    AfterValidator(cluster_exists),
-    WithJsonSchema({
-        "type": "string",
-        "description": "Every cluster assignment needs to match exactly one of the cluster names provided by user."
-    })
-]
-
-class ClusterAssignmentCreateFalse(BaseModel):
-    chain_of_thought: str = Field(description="Think step by step then assign description to existing cluster")
-    cluster_name: ClusterAssignmentValidated
-
+# Function to assign cluster to a description
 @weave.op()
 async def assign_cluster(id_, description, cluster_names, create=True):
     cluster_names_str = wrap_cluster_names(cluster_names)
-    if create:
-        cluster_refine_prompt_val = cluster_refine_prompt_create_true + cluster_names_str
-        cluster_assignment = await aclient.chat.completions.create(
-            model="gpt-4-turbo",
-            response_model=ClusterAssignment,
-            messages=[
-                {
-                    "role": "system",
-                    "content": cluster_refine_prompt_val,
-                },
-                {"role": "user", "content": description},
-            ],
-        )
-    else:
-        cluster_refine_prompt_val = cluster_refine_prompt_create_false + cluster_names_str
-        cluster_assignment = await aclient.chat.completions.create(
-            model="gpt-4-turbo",
-            # response_model=ClusterAssignmentCreateFalse,
-            response_model=ClusterAssignment,
-            messages=[
-                {
-                    "role": "system",
-                    "content": cluster_refine_prompt_val,
-                },
-                {"role": "user", "content": description},
-            ],
-            # validation_context={"existing_clusters": description},
-            # max_retries=2,
-        )
-
-    assigned_cluster = cluster_assignment.cluster_name
+    prompt = cluster_refine_prompt_create_true if create else cluster_refine_prompt_create_false
+    cluster_refine_prompt_val = prompt + cluster_names_str
+    cluster_assignment = await aclient.chat.completions.create(
+        model="gpt-4-turbo",
+        response_model=ClusterAssignment,
+        messages=[
+            {
+                "role": "system",
+                "content": cluster_refine_prompt_val,
+            },
+            {"role": "user", "content": description},
+        ],
+    )
     return {
         'id': id_,
         'description': description,
@@ -217,6 +170,7 @@ async def assign_cluster(id_, description, cluster_names, create=True):
         'CoT': cluster_assignment.chain_of_thought,
     }
 
+# Function to assign clusters to all descriptions in a dataframe
 @weave.op()
 async def assign_clusters(df, cluster_names, create=True):
     assigned_clusters = await asyncio.gather(
@@ -227,3 +181,7 @@ async def assign_clusters(df, cluster_names, create=True):
     df['CoT'] = clustered_df['CoT']
     return df
 
+# Writes a list of cluster names to a specified file.
+def write_cluster_names_to_file(filename, cluster_names):
+    with open(filename, 'w') as file:
+        file.write('\n'.join(cluster_names))
