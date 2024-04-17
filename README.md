@@ -13,6 +13,11 @@ This repository is to support the "Improve Your Business Step by Step: Practical
 ### Part 3 - LLM Evaluations - <a href="https://colab.research.google.com/github/wandb/llm-workshop-fc2024/blob/main/part_3_evaluations/lets_do_evals.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
 <!--- @wandbcode{llm-workshop-fc2024-evaluations} -->
 
+### LLMs at W&B
+**Customer support with WandBot**
+- [Code](https://github.com/wandb/wandbot/)
+- [Evaluation Driven Development](https://wandb.ai/wandbot/wandbot_public/reports/Evaluation-Driven-Development-Improving-WandBot-our-LLM-Powered-Documentation-App--Vmlldzo2NTY1MDI0)
+- [Bringing WandBot to Production](https://wandb.ai/wandbot/wandbot_public/reports/RAGs-To-Riches-Bringing-Wandbot-into-Production--Vmlldzo1ODU5ODk0)
 
 ## Prerequisites
 
