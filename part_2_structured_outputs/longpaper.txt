@@ -1,0 +1,526 @@
+\section{Introduction}
+Emotion, functioning as both a physiological and psychological state within an individual, serves as a rich repository of insights into mental and physical well-being \cite{2001Toward}\cite{2006The}\cite{Kraynak2019Neural}. Emotion recognition stands as a crucial method for objectively discerning human emotional states. Currently, the practice relies on the analysis of either non-physiological signals or physiological signals. In contrast to cues like facial expressions, voice intonation, and gestures, Electroencephalography (EEG) stands out as a non-invasive brain information collection technique. Its strong correlation with human emotional states, coupled with its resistance to deception, positions EEG as a highly accurate means to objectively reflect human emotions \cite{1997Feature}\cite{teplan2002fundamentals}\cite{alarcao2017emotions}.EEG signals exhibit non-stationary characteristics and individual differences \cite{2015Transfer}\cite{si2023cross}, leading to significant variations in the distribution of EEG signals within the same subject across different time periods or between different individuals. Traditional machine learning methods assume independence and identical distribution of data, causing emotion recognition models to have poor generalization across different sessions and different individuals. This limitation poses a challenge in expanding the widespread adoption and application of these models to new sessions and individuals. On the other hand, EEG signals encounter the challenge of a small sample size, typically comprising only a few hundred to a few thousand samples. The labeling process is often expensive and time-consuming, making it challenging to amass a large volume of data. This difficulty in obtaining substantial data poses a hurdle in training a reliable model.Early EEG-based emotion recognition methods mainly rely on conventional non-deep machine learning algorithms\cite{2015Investigating}, including Support Vector Machine (SVM), K-Nearest Neighbor (KNN), and Linear Discriminant Analysis (LDA). In these studies, there is an underlying assumption that EEG samples are independent and identically distributed. However, variations among individuals significantly undermine the effectiveness of traditional machine learning methods in cross-subject emotion recognition tasks. This results in suboptimal performance and poor generalization effects. On the other hand, transfer learning techniques can be beneficial in transferring informative data from the source (training data) to the target domain (test data), which could reduce the variations between different distributions in the modeling. More related transfer learning methods are detailed in Section \ref{sec:RelatedWork}.Compared to deep learning-based transfer learning methods, non-deep learning-based transfer learning offers a more lightweight approach. Unlike deep learning methods, non-deep learning-based transfer requires less labeled data, which is better suited to the current conditions in EEG tasks. In this paper, we propose a novel non-deep learning-based transfer learning framework for cross-subject emotion recognition, named as \textbf{M}anifold-based \textbf{D}omain adaptation with \textbf{D}ynamic \textbf{D}istribution (MDDD). In the proposed MDDD framework, EEG data are mapped to a manifold space where both the marginal and conditional distributions are dynamically analyzed and aligned. Subsequently, classifier learning and ensemble learning are integrated to facilitate reliable cross-subject and cross-session emotion recognition. The results obtained are comparable to those achieved by existing deep-learning-based methods. The main contributions of the paper are summarized below.
+\begin{itemize}
+\item A novel non-deep learning-based transfer learning model, MDDD, is proposed to address the variations in the distribution of EEG signals across different sessions and subjects.
+\item Both marginal distribution and conditional distribution are considered during domain alignment, where  a dynamically adjusted weighting of the importance of the two distributions is incorporated.
+\item An adaptive classifier learning together with an ensemble learning is introduced to  iteratively refine the classifier learning process and leverage the strength of multiple learning models to optimize the prediction of data labels.
+\item Extensive experiments are conducted on two well-known databases under two different validation protocols (cross-subject single-session and cross-subject cross-session). The obtained from the proposed MDDD (non-deep learning) are comparable to those from existing deep learning approaches.
+\end{itemize}\begin{figure*}
+\begin{center}
+\includegraphics[width=1\textwidth]{./MDDD_v8}
+\end{center}
+\caption{The overall architecture of the proposed MDDD model, which includes four mains modules. (1) Manifold Feature Transformation: incorporates Transfer Component Analysis (TCA) to obtain the embedded subspaces, and develops Geodesic Flow Kernel (GFK) algorithm to transform the original features into manifold features. (2) Dynamic Distribution Alignment: dynamically adjusts the importance of the marginal and conditional distributions by learning an adaptive factor $\mu$ during the alignment process. (3) Classifier Learning: summarizes structural risk minimization and distribution alignment to iteratively optimize the classifier. (4) Ensemble Learning: harmonizes the classification results from the iterative classifier learning process and generates a more reliable and robust classification performance. Here, $Source$ and $Target$ refer to the source and target data, respectively. $\mathbb{G}$ is the Grassmann manifold, projected by the geodesic function $\Psi(t)$ ($t \in [0,1]$). The points $\Psi(0)$ and $\Psi(1)$ correspond to the embedded representations of the source and target domains in $\mathbb{G}$. $x_{i,j}$ and $x_{k,l}$ are the samples from the source and target data,respectively. $z^\infty_{i,j,k,l}$ are the corresponding data representation in the manifold space by the geodesic transformation. $H^\infty_{K}$ denotes the reproducing kernel Hilbert space (RKHS), and $G$ is the computed geodesics kernel.}
+\label{fig:standard_pipeline}
+\end{figure*}
+\section{Related Work}
+\label{sec:RelatedWork}
+Domain adaptation stands out as the predominant method in transfer learning, frequently employed to address differences between the distributions of source and target data. It targets the reduction of distribution disparities between the two domains and align the feature distributions, achieving the assumption that the source and target data is independently and identically distributed. Existing domain adaptation-based transfer learning algorithms can be generally categorized into two broad categories: deep transfer learning and non-deep transfer learning.\subsection{Deep Transfer Learning Methods}
+The current trend in the development of transfer learning methods has mainly focused  on deep learning-based approaches. For example, Li \etal \cite{li2018cross} pioneered the use of the Domain Adversarial Neural Network (DANN) in the study of EEG-based emotion recognition. The optimization objective was to establish a shared common feature representation that mitigates distribution differences between the source and target domains. Building upon the aligned feature representation achieved with DANN, Zhou \etal \cite{zhou2023pr} introduced a prototypical representation-based pairwise learning framework, aiming to further enhance cross-subject emotion recognition performance. However, the current DANN network is limited by its exclusive focus on addressing marginal distribution differences in EEG data among different individuals, neglecting joint distribution differences. Considering that individual differences in EEG arise from joint distribution differences between different EEG signals, Li \etal \cite{2019Domain} extended the DANN network by incorporating the Joint Domain Adaptation Network. This extension provides a more comprehensive approach that considers both marginal and joint distribution differences in deep transfer learning studies.Despite the notable achievements of the deep transfer learning methods in emotion recognition tasks, there are certain limitations. Firstly, deep learning methods demand a substantial number of training samples. However, in EEG tasks, the available samples are typically limited to a few hundred or a few thousand. Insufficient samples would constrain performance, leading to overfitting and a decrease in generalization ability. Secondly, deep transfer learning algorithms heavily rely on a substantial amount of accurately labeled source data. If there is noticeable noise in the labels from the source domain, the recognition performance would significantly deteriorate \cite{2003Class}. However, acquiring a sufficient number of samples with precise label information is not only costly but also time-consuming. Thirdly, deep transfer learning methods exhibit high computational complexity, substantial computational requirements, and involve slow and complicated training processes. The reliance on high-end hardware facilities is a significant demand, posing challenges in practical application environments where such resources may not be readily available. In contrast, non-deep transfer learning models exhibit lower complexity, reduced hardware requirements, and lightweight properties, showing the potential for good performance in widespread applications in real-life scenarios.
+\subsection{Non-Deep Transfer Learning Methods}
+Non-deep transfer learning methods align the feature distribution between source and target domains using conventional machine learning approaches. For example, Pan \etal \cite{5640675} introduced a Transfer Component Analysis (TCA) algorithm, leveraging the reproducing kernel Hilbert space to learn transfer information. Through maximizing the Mean Discrepancy (MMD), it successfully mitigated the marginal distribution differences. Zheng \etal \cite{zheng2016personalizing} introduced a Transductive Parameter Transfer (TPT) algorithm to build personalized classifiers for subjects from various source domains. This algorithm mapped the individualized classifier parameters to the target domain, minimizing the MMD between the source and target domains and adapting to marginal distribution. 
+Wang \etal \cite{2018Stratified} introduced a Stratified Transfer Learning (STL) algorithm, which constructed a weak classifier with source data and making predictions on the target domain. Based on this foundation, it further conducted a more thorough exploration of intra-class relationships, leveraging class-relatedness to accomplish adaptive spatial dimensionality reduction.Although the transfer learning strategies mentioned above effectively mitigate differences between the distributions of source and target data by considering marginal or conditional distributions, it's crucial to note that the actual disparities in EEG between subjects primarily exist in their joint distribution \cite{2019Domain}. Current domain adaptation algorithms either focus on marginal or conditional distributions, neglecting to assess the combined contributions in domain adaptation process. It would lead to inefficient data utilization and suboptimal results. To tackle this issue, He \cite{2019Domain} proposed a Joint Distribution Adaptation (JDA), which involved matching these two distributions with equal weights to approximate the adjustment of the joint distribution \cite{2019Fault}. Building upon the proposed JDA, other studies extended its capabilities by incorporating regularization \cite{long2013adaptation}, sparse representation \cite{xu2015discriminative}, structural consistency \cite{2016Unsupervised}, and domain-invariant clustering \cite{tahmoresnezhad2017visual}.However, current methods commonly equate conditional probability distribution with marginal probability distribution. In real-world applications, the contributions of conditional and marginal distributions to the joint probability distribution could be different, which would further affect the alignment effect between the source and target domains. For example, when two domains exhibit high dissimilarity, aligning the marginal distribution becomes more crucial. Conversely, when two domains exhibit high similarity, greater emphasis should be placed on the conditional distribution. Therefore, for better alignment between the two domains, adjusting the importance of marginal and conditional distributions based on the data distribution in the two domains is a critical issue in non-deep transfer learning studies.To tackle the existing critical issues and enhance the performance of non-deep transfer learning in EEG-based emotion recognition applications, we propose a novel \textbf{M}anifold-based \textbf{D}omain adaptation with \textbf{D}ynamic \textbf{D}istribution (MDDD) model in this paper. Based on the extracted differential entropy (DE) features, we first incorporate the TCA algorithm to reduce feature dimensionality and narrow the distribution gap between the features derived from the source and target domains. Subsequently, the features are embedded into the Grassmann manifold space through the computation of the Geodesic Flow Kernel (GFK)\cite{gong2012geodesic}. To enhance the adaptability of our framework, we introduce an adaptive factor that dynamically assesses the significance of both marginal and conditional distributions in the two domains. This factor aids in optimizing the embedding process and ensuring the effective representation of manifold features. Upon achieving a robust manifold feature representation, we proceed with classifier learning to optimize the classification performance under the complex conditions of cross-subject and cross-session scenarios. In this phase, conventional machine learning methods such as Support Vector Machine (SVM), K-Nearest Neighbors (KNN), AdaBoost, Gaussian Naive Bayesian (GNB), Decision Tree (DT), and Bagging classifiers are employed as the initial classifiers. Finally, the classification results derived from diverse parameter settings are harmonized through an ensemble learning approach. This ensemble strategy enhances the overall robustness and reliability of the proposed framework, ultimately contributing to more accurate and reliable classification outcomes.\section{Methodology} \label{sec:Methodology}In this section, we will provide a detailed introduction to the proposed MDDD model. As shown in Fig. \ref{fig:standard_pipeline}, MDDD includes four main modules: manifold feature transformation, dynamic distribution alignment, classifier learning, and ensemble learning. In the manifold feature transformation module, the input data initially undergoes a reduction to lower-dimensional features through TCA. Then, a manifold kernel $G$ is learned to facilitate the transformation of the reduced features into an optimal manifold space. In the dynamic distribution alignment module, {Structural Risk Minimization (SRM) \cite{Vapnik1999An}} is incorporated to dynamically align the feature distribution within the obtained manifold space. This adaptive alignment process enhances the model's capacity to effectively capture and adapt to variations in the underlying data distribution. In the classifier learning module, a classifier is constructed using the aligned manifold features. Initially, conventional machine learning methods are employed, and the classifier is then further iteratively optimized by solving the given classification loss. In the ensemble learning module, all the optimized classification results from the iterative process in the classifier learning module are harmonized to generate a more robust and reliable performance. These are the final results for cross-subject and cross-session EEG-based emotion recognition.
+\subsection{Manifold Feature Transformation}Traditional feature alignment methods typically rely on original data features, which can be problematic due to deformations within the original feature space. These deformations make it difficult to effectively reduce differences between the source and target domains, negatively impacting model performance. Alternatively, the manifold space offers a solution by capturing the core aspects of data and representing original information in a more {compact form \cite{2006Manifold,hamm2008grassmann}}. In the present study, our emphasis centers on leveraging the Grassmann manifold space to encapsulate the intrinsic essence of the data, which enables the creation of a more robust and dimensionality-reduced representation and offers a more effective way to align features across different domains.In this paper, we introduce a manifold feature transformation process, as illustrated in Fig. \ref{fig:standard_pipeline}. The source and target domains are represented as $D_{S}=\{(x_1,y_1),...,(x_n,y_n)\}$ and $D_{T}=\{(x_{n+1},y_{n+1}),...,(x_{n+m},y_{n+m})\}$, respectively, with each domain featuring $D$-dimensional data representations. Through {Transfer Component Analysis (TCA) \cite{5640675}}, we map both domains into a lower $d$-dimensional feature space ($d \ll D$), denoted as $T_S$ and $T_T$. This process effectively reduces the dimensionality of the feature space, facilitating more efficient data analysis and interpretation. Subsequently, we embed the mapped $d$-dimensional feature subspace into the Grassmann manifold, {denoted as $\mathbb{G}$.} In this manifold space, our goal is to enhance the similarity between the source and target domains' data as much as possible. Simultaneously, we aim to retain the unique attributes and inherent characteristics of each domain's data. This approach ensures that, despite the alignment of the domains in a shared feature space, the distinctiveness and originality of each domain are preserved, maintaining the integrity and context of the data from both domains.To make the data distributions of the two domains more similar in the Grassmann manifold, we either bring the source domain closer to the target domain or vice versa. Here, we construct geodesics within $\mathbb{G}$, treating the source and target domains as points in this manifold space. By navigating along these geodesics, we facilitate a systematic journey from the source domain towards the target domain, enabling a gradual harmonization of their data distributions within the Grassmann manifold and ensuring a smoother and more effective domain alignment. In the process of constructing geodesics, we apply the standard Euclidean metric to the Riemannian manifold. This allows the geodesic to be described by a parameterization function, $\Psi$, where $t$ ranges from 0 to 1, mapping to $\Psi(t)$ within the Grassmann manifold. Specifically, $\Psi(0)$ and $\Psi(1)$ correspond to the embedded representations of the source and target domains in $\mathbb{G}$, respectively. Thus, the geodesic delineates the trajectory by which $\Psi(0)$ evolves into $\Psi(1)$, representing the most direct path within the manifold space that connects these two domain representations. To ensure a smooth and continuous transformation across the manifold, the intermediate values of $t$ ($t \in (0,1)$), $\Psi(t)$ satisfies the following conditions:
+\begin{equation}
+\label{Eq:geodesic}
+\Psi\left(t\right)=T_{S}U_{1}\Gamma \left(t\right)-R_{S}U_{2}\Sigma \left(t\right),
+\end{equation}
+where $T_{S} \in \mathbb{R}^{M \times d}$ denote the set of orthonormal base for the source domain. $M$ is the sample size. $R_{S} \in \mathbb{R}^{M \times (D-d)}$ signifies the orthogonal complement of $T_{S}$, serving to encapsulate the dimensions outside the primary subspace spanned by $T_{S}$. $U_{1} \in \mathbb{R}^{d \times d}$ and $U_{2} \in \mathbb{R}^{(D-d) \times d}$ are both orthogonal matrices, which can be obtained through the following two sets of Singular Value Decomposition (SVD) as
+\begin{equation}
+\label{Eq:SVD}
+T^{\top}_{S}T_{T}=U_{1}\Gamma V^{\top}, R^{\top}_{S}T_{T}=-U_{2}\Sigma V^{\top}.
+\end{equation}
+Here, $T_{T} \in \mathbb{R}^{M \times d}$ refer to the set of orthonormal base for the target domain. $\Gamma$ and $\Sigma$ are both $d \times d$ diagonal matrices, where their diagonal elements being $\cos{\theta_{k}}$ and $\sin{\theta_{k}}$ ($k = 1,2,...,d$), respectively. The variable $\theta_{k}$ denotes the angles between the orthonormal bases $T_{S}$ and $T_{T}$, with the constraint $0 \leq \theta_{1} \leq \theta_{2} \leq ... \leq \theta_{d} \leq \dfrac{\pi}{2}$. $\theta_{k}$ serve as a metric for quantifying the alignment between the domains within the $\mathbb{G}$, indicating how closely the subspaces represented by $T_{S}$ and $T_{T}$ are oriented to one another.The operation $\Psi(t)^{\top}x$ represents the projection of a feature vector $x$ from the $d$-dimensional feature space onto the Grassmann manifold space $\mathbb{G}$, where $x$ could be any data sample originating from either the source or the target domain. The selection of an appropriate value or range of values for $t$ becomes a significant challenge, as it directly influences the quality of the projection for $x$. The optimal choice of $t$ ensures that the projected data maintains a balance between adapting to the new domain and preserving its original domain characteristics. This balance is essential for effective domain adaptation, as it allows for the integration of domain-specific features while minimizing the loss of critical information during the transition.Here, we introduce an integration strategy to identify the optimal $t$ or a set of $t$ points between any two given data samples $x_{i}$ and $x_{j}$, and utilize a geodesic kernel to facilitate the mapping process. This methodology effectively transforms the $d$-dimensional feature space into an infinite-dimensional feature space, which serves to mitigate domain drift (a common challenge in domain adaptation). For each pair of data samples, $x_{i}$ and $x_{j}$, we iteratively calculate their projections onto $\Psi(t)$, where $t$ varies incrementally from 0 to 1. Through this process, each data sample is mapped across a continuum within the Grassmann manifold space, capturing the evolution of its feature representation as it transitions from being aligned with the source domain ($t=0$) to being aligned with the target domain ($t=1$). The culmination of this iterative projection process results in the creation of two infinite-dimensional feature vectors, denoted as $z^\infty_{i}$ and $z^\infty_{j}$,
+\begin{equation}
+\label{Eq:i_feature}
+z^\infty_{i}=\int^1_{0}\left(\Psi\left(t\right)^{\top}x_{i}\right)dt,
+\end{equation}
+\begin{equation}
+\label{Eq:j_feature}
+z^\infty_{j}=\int^1_{0}\left(\Psi\left(t\right)^{\top}x_{j}\right)dt,
+\end{equation}
+{where }$z^\infty_{i}$ and $z^\infty_{j}$ encapsulate the comprehensive trajectory of each data sample across the manifold, providing a rich, multidimensional perspective on the domain adaptation process. This strategy enhances the adaptability and accuracy of domain adaptation by leveraging the inherent structure of the data within the manifold, thereby offering a more effective approach to overcoming the challenges of domain drift.
+{From \cite{gong2012geodesic}, }the geodesic kernel is then determined as the inner product of the two infinite-dimensional vectors, as
+\begin{equation}
+\label{Eq:geodesic_kernel}
+\left<z^\infty_{i},z^\infty_{j}\right>=\int^1_{0}\left(\Psi\left(t\right)^{\top}x_{i}\right)^{\top}\left(\Psi\left(t\right)^{\top}x_{j}\right)dt=x^{\top}_{i}Gx_{j},
+\end{equation}
+where $G \in \mathbb{R}^{D \times D}$ is a positive semi-definite matrix, computed as
+\begin{equation}
+\label{Eq:G}
+G=\begin{bmatrix}T_{S}U_{1} & R_{S}U_{2}\end{bmatrix} \begin{bmatrix}\Lambda_{1} & \Lambda_{2} \\ \Lambda_{2} & \Lambda_{3} \end{bmatrix} \begin{bmatrix}
+U^{\top}_{1} & T^{\top}_{S} \\U^{\top}_{2} & R^{\top}_{S} \end{bmatrix}.
+\end{equation}
+Here, $\Lambda_{1}, \Lambda_{2}, \Lambda_{3}$ are all diagonal matrices, and the corresponding diagonal elements are given as {
+\begin{equation}
+\label{Eq:lambad}
+\begin{split}
+\begin{cases}
+    \lambda_{1,k}=1+\dfrac{\sin{2\theta_{k}}}{2\theta_{k}},\\
+    \lambda_{2,k}=\dfrac{\cos{2\theta_{k}}-1}{2\theta_{k}},\\
+    \lambda_{3,k}=1-\dfrac{\sin{2\theta_{k}}}{2\theta_{k}},\\
+\end{cases}
+\end{split}
+\end{equation}}where $k$ is in the range of $[1,d]$. The computed geodesics kernel $G$ enables the effective transformation of a data sample $x$, initially positioned within the $d$-dimensional feature space, into the Grassmann manifold space, as
+\begin{equation}
+\label{Eq:manifold feature z}
+z=\sqrt{G}x.
+\end{equation}
+This transformed representation, $z$, integrates the intrinsic features of $x$ as it is projected through the manifold, leveraging the geometrical properties of $\mathbb{G}$ to achieve a more domain-adaptive feature representation and address domain drift in transfer learning.
+\subsection{Dynamic Distribution Alignment}After the manifold feature transformation, the feature distributions between the source and target domains would exhibit greater similarity than seen with the original feature representation. Still, differences remain in both the marginal probability distribution and conditional probability distribution. Current distribution adaptation methods commonly assume equal importance for both {the marginal distribution $P$ and conditional distribution $Q$ \cite{2013Transfer,2017Joint}}. Traditional distribution adaptation methods often treat the adaptation of marginal and conditional distributions as equally important, an assumption that may not always be applicable. In scenarios where significant differences exist between the source and target domains, the adaptation of the marginal distribution takes on increased importance. Conversely, in situations where the source and target domains are more closely aligned, the adaptation of the conditional distribution becomes more critical. Therefore, recognizing and adjusting the emphasis on marginal or conditional distribution adaptation based on the domains' specific characteristics is essential for achieving successful distribution adaptation.In the present study, an adaptive factor $\mu \in [0,1]$ is incorporated to dynamically adjust the emphasis placed on marginal and conditional distributions. This adaptive factor allows for the flexible allocation of importance between the two types of distributions based on the characteristics of the source and target domains, which is defined as
+\begin{equation}
+    \label{Eq:dynamic distribution adaptation}
+    \begin{split}
+    \overline{D}_{f}\left(T_{S},T_{T}\right)=\left(1-\mu\right)D_{f}\left(P_{s},P_{t}\right) \\
+    +\mu\sum^C_{c=1}D_{f}^{(c)}\left(Q_{s},Q_{t}\right),    
+    \end{split}
+\end{equation}
+where $\overline{D}_{f}\left(T_{S}, T_{T}\right)$ represents the dynamic distribution adaptation between the source and target domains within the manifold feature space. $D_{f}(P_{s}, P_{t})$ is the marginal distribution adaptation, and $D_{f}^{(c)}(Q_{s}, Q_{t})$ is the conditional distribution adaptation for the class $c$ ($c \in \{1,..., C\}$). The total number of classes is represented by $C$. When $\mu$ is close to 0, it indicates significant differences between the source and target domains, thus prioritizing the adaptation of marginal distributions. When $\mu$ approaches 1, it suggests a greater similarity between the domains, thereby emphasizing the need for conditional distribution adaptation. At the midpoint, $\mu = 0.5$, the model treats both marginal and conditional distributions with equal importance.In (\ref{Eq:dynamic distribution adaptation}), the marginal distribution adaptation $D_{f}(P_{s}, P_{t})$ is defined as
+\begin{equation}
+    \label{Eq:marginal distribution adaptation}
+    D_{f}\left(P_{s},P_{t}\right)=\Vert E\left[f\left(z_{s}\right)\right]-E\left[f\left(z_{t}\right)\right] \Vert^2_{H_{K}},
+\end{equation}
+where $z_{s}$ and $z_{t}$ are the source and target data represented in the manifold feature space, given in (\ref{Eq:manifold feature z}). $f$ refers to the classifier. The term $H_{K}$ denotes the reproducing kernel Hilbert space (RKHS), which is a space of functions generated by the feature mapping $\Psi(\cdot)$. This mapping is critical for capturing the complex structures within the data by projecting it into a higher-dimensional space where linear separability is more feasible. For the computation of the conditional distribution adaptation $D_{f}^{(c)}(Q_{s}, Q_{t})$, it calculate in a similar way, as
+   \begin{equation}
+    \label{Eq:conditional distribution adaptation}
+    D_{f}^{(c)}\left(Q_{s},Q_{t}\right)=\Vert E\left[f\left(z_{s}^{(c)}\right)\right]-E\left[f\left(z_{t}^{(c)}\right)\right] \Vert^2_{H_{K}},
+\end{equation}
+{where }$z_{s}^{(c)}$ and $z_{t}^{(c)}$ are the $c$-class source and target data represented in the manifold feature space (\ref{Eq:manifold feature z}). Then, (\ref{Eq:dynamic distribution adaptation}) could be rewritten as
+\begin{equation}
+    \label{Eq:renew dynamic distribution adaptation}
+    \begin{split}
+     \overline{D}_{f}\left(T_{S},T_{T}\right)=\left(1-\mu\right)\Vert E\left[f\left(z_{s}\right)\right]-E\left[f\left(z_{t}\right)\right] \Vert^2_{H_{K}} \\
+     +\mu\sum^C_{c=1}\Vert E\left[f\left(z_{s}^{(c)}\right)\right]-E\left[f\left(z_{t}^{(c)}\right)\right] \Vert^2_{H_{K}}.
+    \end{split}
+\end{equation}Given the absence of label information for the target domain during the training phase, we cannot directly obtain $f(z_{t}^{(c)})$ in (\ref{Eq:renew dynamic distribution adaptation}). To tackle this issue, we approximate $f(z_{t}^{(c)})$ using {the class-conditional probability distribution \cite{2017Balanced}}. Specifically, the process begins by training an initial weak classifier, such as a Support Vector Machine (SVM) or K-Nearest Neighbors (KNN), on the source data. This initial classifier, $f$, is subsequently utilized to infer pseudo-labels for the target data, serving as a provisional substitute for the unavailable true labels of the target domain. To enhance the reliability and accuracy of the pseudo-labels, an iterative refinement strategy is employed to improve the decodability $f$. This involves using the outcomes of the initial classifier to iteratively train subsequent classifiers, thereby progressively refining the pseudo-labels. This iterative process aims to converge towards more accurate pseudo-labels, thus improving the model's ability to generalize from the source to the target domain effectively. Further details on the specific iterative refinement process and how it contributes to classifier learning will be discussed in Section \ref{subsec:Classifier Learning}.
+In (\ref{Eq:renew dynamic distribution adaptation}), the adaptive factor $\mu$ is not a constant value predetermined by prior knowledge. Instead, it is dynamically learned based on the underlying data distribution. Specifically, we use {the A-distance measurement \cite{ben2006analysis}} as a metric to estimate the marginal distribution difference, denoted as $d_{A}$, between the source and target domains, as
+\begin{equation}
+    \label{Eq:a-distance in marginal distribution}
+    d_{A}\left(T_{S},T_{T}\right)=2\left(1-2\epsilon\left(h\right)\right),
+\end{equation}
+where $\epsilon\left(h\right)$ denotes the hinge loss, which is derived from a binary classifier trained specifically to distinguish between samples from the source and target domains. For the conditional distribution difference, based on the provided label information for source data and the estimated pseudo-label information of target data, we conduct the A-distance measurement within each $c$ class ($c \in [1,\dots, C]$) as
+\begin{equation}
+    \label{Eq:a-distance in conditional distribution}
+    d_{c}=d_{A}\left(T_{S}^{(c)},T_{T}^{(c)}\right).
+\end{equation}
+Here, $T_{S}^{(c)}$ and $T_{T}^{(c)}$ represent the subsets of data corresponding to class $c$ from the source and target domains, respectively. Then, the adaptive factor $\mu$ can be estimated as
+\begin{equation}
+    \label{Eq:mu}
+    \mu=1-\dfrac{d_{A}}{d_{A}+\sum^C_{c=1}d_{c}}.
+\end{equation}
+In the process of dynamic distribution alignment, the adaptive factor $\mu$ is recalculated at each iteration, underscoring the iterative and responsive nature of this adaptation strategy. This re-calibration is essential to ensuring that the adaptation process remains attuned to the evolving similarities and differences between the source and target domain feature distributions as they are represented in the manifold feature space.
+\subsection{Classifier Learning}
+\label{subsec:Classifier Learning}
+Through the integration of manifold feature learning and dynamic distribution alignment, we can formulate an adaptive classifier $f$ at the $\iota$th iteration as
+\begin{equation}
+\label{Eq:f}
+\begin{split}
+    f^{\iota}=\mathop{\arg\min}_{f\in H_{K}}\sum^n_{i=1}\left(y_{i}-f^{(\iota-1)}\left(z_{i}\right)\right)^2+\eta\Vert f^{(\iota-1)}\Vert^2_{H_{K}} \\
+    +\lambda\overline{D}_{f^{(\iota-1)}}\left(T_{S},T_{T}\right)
+    +\rho R_{f^{(\iota-1)}}\left(T_{S},T_{T}\right).
+\end{split}
+\end{equation}
+Here, $\iota$ is the iteration number, $y_i$ is the groundtruth, and $f(z_i)$ is the predicted classification result. $\Vert \cdot \Vert^2_{H_{K}}$ refers to the L2 norm in the reproducing kernel Hilbert space. The dynamic distribution adaptation term, $\overline{D}_{f}\left(T_{S},T_{T}\right)$, is obtained in (\ref{Eq:renew dynamic distribution adaptation}). Further, a Laplacian regularization term, $R_{f}\left(T_{S},T_{T}\right)$, is incorporated to leverage the inherent geometric similarities among neighboring points {in the manifold $\mathbb{G}$ \cite{2006Manifold}}. Here, the classifier $f$ can be initialized using a commonly employed machine learning classifier, followed by adaptive optimization through an iterative learning process.In the SRM framework with {the representer theorem \cite{2006Manifold}}, $f$ can be expanded as
+    \begin{equation}
+    \label{Eq:SRM f} f\left(z\right)=\sum^{n+m}_{i=1}\beta_{i}K\left(z_{i},z\right),
+    \end{equation}
+which includes both labeled and unlabeled samples from source and target domains, and  $\beta = (\beta_{1}, \beta_{2}, \dots, \beta_{n+m})^T \in \mathbb{R}^{(n+m)\times 1}$ is the coefficient vector. $K$ is the kernel function. For the SRM on the source domain, the first part in (\ref{Eq:f}) could be expressed as  
+    \begin{equation}
+        \label{Eq:SRM on the sourece domain}
+        \begin{split}
+        \sum^n_{i=1}\left(y_{i}-f\left(z_{i}\right)\right)^2+\eta\Vert f\Vert^2_{H_{K}}\\
+        =\sum^{n+m}_{i=1}A_{ii}\left(y_{i}-f\left(z_{i}\right)\right)^2+\eta\Vert f\Vert^2_{H_{K}}, \\
+        \end{split}
+    \end{equation}
+where $\Vert \cdot\Vert_{F}$ is the Frobenius norm. The matrix $A \in \mathbb{R}^{(n+m) \times (n+m)}$ is {a diagonal indicator matrix with $A_{ii} = 1$ if $i \in T_{S}$, and $A_{ii} = 0$ if $i \in T_{T}$}. Substituting (\ref{Eq:SRM f}) into (\ref{Eq:SRM on the sourece domain}), then we can obtain
+\begin{equation}
+\label{final SRM on the sourece domain}
+\begin{split}
+    \sum^n_{i=1}\left(y_{i}-f\left(z_{i}\right)\right)^2+\eta\Vert f\Vert^2_{H_{K}}\\
+    =\Vert\left(Y-\beta^{\top}\boldsymbol{K}\right)A\Vert^2_{F}+\eta tr\left(\beta^{\top}\boldsymbol{K}\beta\right),\\
+\end{split}
+\end{equation}
+{where }$\boldsymbol{K} \in \mathbb{R}^{(n+m) \times (n+m)}$ is the kernel matrix, with $\boldsymbol{K}_{ij} = \boldsymbol{K}(z_{i},z_{j})$. The label information of the source and target data is denoted by $Y = [y_{1},...,y_{n+m}]$. For the target data, the corresponding label information is the pseudo label generated by the learned classifier $f(\cdot)$. $tr(\cdot)$ is the trace operation.For the second part in (\ref{Eq:f}), through applying (\ref{Eq:SRM f}), we can represent the calculation of dynamic distribution adaptation (\ref{Eq:renew dynamic distribution adaptation}) as
+    \begin{equation}
+    \label{Eq:final dynamic distribution adaptation}
+    \overline{D}_{f}\left(T_{S},T_{T}\right)   =tr\left(\beta^{\top}\boldsymbol{K}M\boldsymbol{K}\beta\right),
+    \end{equation}
+where $M = (1-\mu)M_{0} + \mu\sum^C_{c=1}M_{c}$. $c$ is the class category, and $C$ refers to the total number of classes. $M_{0}$ and $M_{c}$ are defined as
+\begin{equation}
+    \label{Eq:M0}
+     \left(M_{0}\right)_{ij}=  
+     \begin{cases}
+     \frac{1}{n^2}& z_{i},z_{j}\in T_{S} \\
+     \frac{1}{m^2}& z_{i},z_{j}\in T_{T} \\
+     -\frac{1}{mn}& otherwise
+     \end{cases},
+\end{equation}
+    \begin{equation}
+    \label{Eq:Mc}
+    \left(M_{c}\right)_{ij}=  
+    \begin{cases}
+     \frac{1}{n^2_{c}}& z_{i},z_{j}\in T_{S}^{(c)}\\
+     \frac{1}{m^2_{c}}& z_{i},z_{j}\in T_{T}^{(c)} \\
+     -\frac{1}{m_{c}n_{c}}& 
+     \begin{cases}
+     z_{i}\in T_{S}^{(c)},z_{j}\in T_{T}^{(c)} \\
+     z_{i}\in T_{T}^{(c)},z_{j}\in T_{S}^{(c)}
+     \end{cases}\\
+     0 & otherwise 
+     \end{cases}.
+\end{equation}
+Here, $n_{c} = |T_{S}^{(c)}|$ and $m_{c} = |T_{T}^{(c)}|$. The third part in (\ref{Eq:f}) (the Laplacian regularization term $R_{f}\left(T_{S},T_{T}\right)$) could be computed as
+    \begin{equation}
+    \label{Eq:Laplacian regularization}
+    \begin{split}    R_{f}\left(T_{S},T_{T}\right)=\sum^{n+m}_{i,j=1}W_{ij}\left(f\left(z_{i}\right)-f\left(z_{j}\right)\right)^2 \\
+        =\sum^{n+m}_{i,j=1}f\left(z_{i}\right)L_{ij}f\left(z_{j}\right),\\
+    \end{split}                                       
+    \end{equation}
+where $W_{ij}$ is a pairwise similarity matrix, and $L=D-W$ is the normalized graph Laplacian matrix. $D$ is a diagonal matrix, with $D_{ii}=\sum^{n+m}_{j=1}W_{ij}$. $W$ could be represented as
+    \begin{equation}
+    \label{Eq:Wij}
+    W_{ij}=
+    \begin{cases}
+    sim\left(z_{i},z_{j}\right) & z_{i}\in N_{p}\left(z_{j}\right) or z_{j}\in N_{p}\left(z_{i}\right),\\
+    0& otherwise,
+    \end{cases}
+    \end{equation}
+where $sim(\cdot,\cdot)$ is a similarity function (e.g., cosine distance) used to assess the proximity between two points. $N_{p}(z_{i})$ represents a set of $p$ nearest points to $z_{i}$. $p$ is a hyperparameter.
+Similarly, by applying (\ref{Eq:SRM f}), the Laplacian regularization given in (\ref{Eq:Laplacian regularization}) can be expressed as
+\begin{equation}
+\label{Eq:renew Laplacian regularization}
+R_{f}\left(T_{S},T_{T}\right)=tr\left(\beta^{\top}\boldsymbol{K}L\boldsymbol{K}\beta\right).
+\end{equation}Then, by substituting (\ref{final SRM on the sourece domain}), (\ref{Eq:final dynamic distribution adaptation}) and (\ref{Eq:renew Laplacian regularization})into the (\ref{Eq:f}), the classifier $f$ can be calculated as:
+    \begin{equation}
+    \label{Eq:final f}
+    \begin{split}
+    f=\mathop{\arg\min}_{f\in H_{K}}\Vert\left(Y-\beta^{\top} \boldsymbol{K}\right)A\Vert^2_{F}+\eta tr\left(\beta^{\top} \boldsymbol{K}\beta\right) \\
+    +tr\left(\beta^{\top} \boldsymbol{K}\left(\lambda M+\rho L\right)\boldsymbol{K}\beta\right).
+    \end{split}
+    \end{equation}Setting $\frac{\partial f}{\partial \beta} = 0$, (\ref{Eq:final f}) could be solved as:
+    \begin{equation}
+    \label{Eq:beta}
+    \begin{split}
+    \beta^{*}=\left(\left(A+\lambda M+\rho L\right)\boldsymbol{K}+\eta I \right)^{-1}AY^{\top}.   
+    \end{split}
+    \end{equation}  
+After obtaining $\beta^{*}$, the classifier $f$ can be determined using (\ref{Eq:final f}). Then, the corresponding soft label of the target domain at $\iota$th iteration could be denoted as $\hat{y}_{t}^{\iota}=f^{\iota}(z_{t})$.
+ \begin{algorithm*}[]
+  \caption{The algorithm flow of the proposed MDDD model.}
+  \label{alg::conjugateGradient}
+  \begin{algorithmic}[1]
+    \Require
+\renewcommand{\algorithmicrequire}{\textbf{}}
+    \Require- Data matrix $X=\left[X_{s},X_{t}\right]$, source labels $y_{s}$, subspace dimension $d$, regularization parameters $\lambda,\beta,\rho$ and the iteration number $\iota$;
+    \Ensure Classifier $f(\cdot)$; 
+    \Statex \textcolor{gray}{\# Manifold Feature Transformation}
+     \State Learn the manifold feature transformation kernel $G$ and obtain the manifold feature representation $z$ using (\ref{Eq:manifold feature z});
+     \State Train a weak classifier based on the source data $D_{S}$, and get initialized soft labels $\hat{y}_{t}^{0}$ for the target data $D_{T}$;
+     \State Construct the geodesic line kernel $K$ using the transformed features $z_{s}=z_{1:n}$ and $z_{t}=z_{n+1:n+m}$;
+     \For {$\iota=1$ to $l$}
+        
+\Statex \textcolor{gray}{\# Dynamic Distribution Alignment}
+        \State Calculate the adaptive factor $\mu$ using (\ref{Eq:mu}), and compute $M_{0}$ and $M_{c}$ using (\ref{Eq:M0}) and (\ref{Eq:Mc});
+        \State Solve the equation using (\ref{Eq:beta}) to compute $\beta^{*}$ and obtain the classifier $f$ using (\ref{Eq:final f});
+        
+\Statex \textcolor{gray}{\# Classifier Learning}
+        \State Update the soft labels for the target data $\hat{y}_{t}^{\iota}=f(z_{t})$;
+    \EndFor
+     \State Return the classifier $f$;
+     \Statex \textcolor{gray}{\# Ensemble Learning}
+     \State Perform ensemble learning based on the obtained soft labels in the loop $\{\hat{y}_{t}^{\iota}\}_{\iota=1}^l$.
+\end{algorithmic}
+\end{algorithm*}\color{black}            
+\subsection{Ensemble Learning}Ensemble learning with {LinkCluE algorithm \cite{iam2010linkclue}} is adopted here to strategically reduce classification bias inherent in individual models and improve the overall generalization performance of the model. Based on the obtained $\hat{y}_{t}$ in a certain round of classifier learning, the ensemble learning leverages the strengths over a group of $\hat{y}_{t}^{\iota}$ ($\iota=1,\dots,l$. Empirically, $l$ is set to 10) and form together to generate a strong prediction results $\hat{y}_{t}$.Fig. \ref{fig:Ensemble_Learning} illustrates the two main steps involved in the LinkCluE algorithm: the link-based similarity matrix function and the consensus function. For the link-based similarity matrix function, it constructs a similarity matrix based on the links or relationships between data points in terms of Connected-Triple-Based Similarity (CTS), SimRank-Based Similarity (SRS), and Approximate SimRank-Based Similarity (ASRS). This matrix serves as a foundation for understanding the complex, often non-linear relationships that exist between data points, leveraging the structure of the data to enhance the learning process. For the consensus function, it integrates the outcomes of various individual models within the ensemble by leveraging three different hierarchical agglomerative clustering algorithms, Single Linkage (SL), Complete Linkage (CL), and Average Linkage (AL). This step is crucial for mitigating individual model biases and errors, leading to more accurate and generalizable results. The overall algorithm of the proposed MDDD is illustrated in Algorithm \ref{alg::conjugateGradient}.\begin{figure}[]
+\begin{center}
+\includegraphics[width=0.5\textwidth]{./LinkCluE_v8}
+\end{center}
+\caption{The main process of the LinkCluE ensemble algorithm. (1) Link-based Similarity Matrix Function: takes a set of {input vectors $\hat{y}_{t}^{\iota}$} ($\iota=1,\dots,l$) and constructs a similarity matrix as its output. (2) Hierachical Clustering: processes the similarity matrix through a hierarchical clustering algorithm to produce the final clustering result, {denoted as $\hat{y}_{t}$}.}
+\label{fig:Ensemble_Learning}
+\end{figure} \section{Experimental Results}
+\label{sec:experiment}\subsection{Emotional Databases}
+The model performance is carefully validated on two well-known publicly available databases: SEED \cite{2015Investigating} and SEED-IV \cite{Zheng2019EmotionMeter}. The SEED database includes EEG emotion data collected from 15 participants. Each participant was exposed to a total of 15 movie clips designed to evoke three types of emotions (positive, negative, and neutral). The SEED-IV database also includes EEG emotion data from 15 participants, exposed to a total of 24 movie clips aimed at eliciting four types of emotions (happy, sad, neutral, and fear). For both SEED and SEED-IV databases, participants underwent three sessions spread across separate days, with a one-week break between sessions. The EEG signals were recorded using the ESI Neuroscan system with 62 channels.The EEG preprocessing followed established procedures in the literature. The process began with the downsampling of EEG signals to 200 Hz, followed by the removal of artifacts such as the Electrooculogram (EOG) and Electromyography (EMG). A bandpass filter with a 0.3-50 Hz range was then applied to improve the signal quality. Following this, each trial was segmented into multiple 1-second data samples. To extract emotional related information, differential entropy (DE) features were extracted across five frequency bands: Delta (1-3 Hz), Theta (4-7 Hz), Alpha (8-13 Hz), Beta (14-30 Hz), and Gamma (31-50 Hz). Thus, for each 1-second data sample, a total of 310 features (5 frequency bands $\times$ 62 channels) were characterized, which serves as the input for the model.\subsection{Experimental Protocols}
+In order to thoroughly assess the robustness and stability of the proposed model and ensure a detailed comparison with existing literature, two types of experimental protocols are conducted.
+\begin{itemize}
+    \item \textbf{Cross-subject single-session leave-one-subject-out cross-validation}. As illustrated in Fig. \ref{fig:crossSub} (a), the data samples from 14 subjects in the first session are used as the source domain, and the data samples from the remaining 1 subject in the same session are used as the target domain. This procedure repeats 15 times, ensuring that each participant is treated as the target domain at least once.
+    \item \textbf{Cross-subject cross-session leave-one-subject-out cross-validation}. As shown in Fig. \ref{fig:crossSub} (b), the data samples from 14 subjects across all three sessions are used as the source domain, and the data samples from the remaining 1 subject across all three sessions are used as the target domain. This procedure also repeats 15 times, ensuring that each participant is treated as the target domain at least once.
+\end{itemize}
+\color{black}
+In the present study, we adopt six widely recognized machine-learning classifiers to generate the initial classification results ($\hat{y}_t^{0}$) as mentioned in Section \ref{subsec:Classifier Learning}. The adopted machine-learning classifiers include K-Nearest Neighbors (KNN) \cite{0An}, Support Vector Machine (SVM) \cite{1995Support}, Decision Tree (DT) \cite{2018Study}, Adaboost classifier \cite{1997A}, Gaussian Naive Bayes (GNB) classifier \cite{2001An}, and Bagging classifier \cite{1996Bagging}. In the SVM classifier, the radial basis function (RBF) kernel is utilized. In ensemble learning, the application of three similarity matrix functions (CTS, SRS, and ASRS) combined with three hierarchical agglomerative clustering algorithms (SL, CL, and AL) yields a total of 9 possible combinations. Here, the combination that achieves the highest accuracy in predicting target domain labels will be chosen as the optimal outcome. Notably, all the best results are achieved using the CTS-SL approach. For performance evaluation, a comprehensive analysis of the model's efficacy is conducted using the accuracy and F1-score metrics.
+\begin{figure}[]
+\begin{center}
+\includegraphics[width=0.49\textwidth]{./crossSubSingleSess_CrossSess}
+\end{center}
+\caption{Two types of experimental protocols. (a) Cross-subject within-session leave-one-out cross-validation. (b) Cross-subject cross-session leave-one-out cross-validation.}
+\label{fig:crossSub}
+\end{figure}
+\subsection{Experimental Results on Cross-Subject Single-Session}
+The experimental results on SEED database under the cross-subject single-session cross-validation are reported in Table \ref{tab:seed_singlesession}. The best performance is obtained when DT is adopted as the initial classifier, where the corresponding accuracy and F1-score are 84.57\\begin{table}[]
+\begin{center}
+\color{black}
+\caption{Cross-subject single-session leave-one-subject-out cross-validation on SEED with different initial classifiers.}
+\label{tab:seed_singlesession}
+\setlength{\tabcolsep}{2mm}
+\scalebox{1}
+{
+\begin{tabular}{lcccccc}
+\toprule
+Classifier & KNN & SVM  & DT & Adaboost & GNB & Bagging   \\ 
+\midrule
+Accuracy & 84.46    & 84.51 & \textbf{84.57} & 84.10 &84.10 & 84.10 \\
+F1-score  & 75.77 & 75.84 & \textbf{76.11} & 74.49 & 74.49 &74.49  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}\begin{table}[]
+\begin{center}
+\caption{Performance comparison on SEED using cross-subject single-session leave-one-subject-out cross-validation.}
+\label{tab:seed_singleCompare}
+\setlength{\tabcolsep}{2.8mm}
+\scalebox{1}{
+\color{black}
+\begin{tabular}{lclc}
+\toprule
+Methods   & $P_{acc}$   & Methods   & $P_{acc}$    \\ 
+\midrule
+\multicolumn{4}{c}{\textbf{\textit{Traditional machine learning methods}}} \\ 
+\midrule
+TKL\cite{2018A}       & 63.54/15.47 & 
+T-SVM\cite{2018A}     & 72.53/14.00           \\
+TCA\cite{2019A}       & 63.64/14.88 & TPT\cite{li2018cross}       & 76.31/15.89           \\
+KPCA\cite{li2018cross}      & 61.28/14.62 & GFK\cite{2019A}       & 71.31/14.09           \\
+SA\cite{2019A}        & 69.00/10.89 & DICA\cite{ma2019reducing}      & 69.40/07.80           \\ 
+DNN\cite{li2018cross} & 61.01/12.38 & SVM\cite{li2018cross} & 58.18/13.85 \\ 
+\midrule
+\multicolumn{4}{c}{\textit{\textbf{Deep learning methods}}}\\ 
+\midrule
+DGCNN  \cite{song2018eeg}& 79.95/09.02 &DAN \cite{li2018cross}                & 83.81/08.56 \\
+ADA\cite{2019Domain}       & 84.47/10.65 & R2G-STNN\cite{2019From}  & 84.16/07.63 \\
+Bi-DANN\cite{2018A}   & 83.28/09.60 & MMD \cite{2019Domain}         & 80.88/10.10 \\
+DANN\cite{2019Domain}           & 81.65/09.92 & SimNet\cite{Pinheiro2018}    & 81.58/05.11 \\\midrule
+\multicolumn{3}{l}{\textbf{MDDD}} & \textbf{84.57/09.49}  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}
+For the SEED-IV database, the experimental results with the cross-subject single-session leave-one-subject-out cross-validation protocol are presented in Table \ref{tab:seedIV_singlesession}. The best accuracy is obtained when DT is used as the initial classifier, where the corresponding accuracy and F1-score are 60.94\\begin{table}[]
+\begin{center}
+\color{black}
+\caption{Cross-subject single-session leave-one-subject-out cross-validation on SEED-IV with different initial classifiers.}
+\label{tab:seedIV_singlesession}
+\setlength{\tabcolsep}{2mm}
+\scalebox{1}
+{
+\begin{tabular}{lcccccc} 
+\toprule
+Classifier & KNN & SVM  & DT & Adaboost & GNB & Bagging   \\ 
+\midrule
+Accuracy & 58.25    & 58.82 & \textbf{60.94} & 58.89 &58.42 & 58.25 \\
+F1-score  & 48.80 & 47.51 & \textbf{50.49} & 48.06 & 45.97 &48.80  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}\begin{table}[]
+\begin{center}
+\caption{Performance comparison on SEED-IV using cross-subject single-session leave-one-subject-out cross-validation.}
+\label{tab:seedIV_singleCompare}
+\setlength{\tabcolsep}{2.8mm}
+\scalebox{1}{
+\color{black}
+\begin{tabular}{lclc}
+\toprule
+Methods   & $P_{acc}$   & Methods   & $P_{acc}$    \\ 
+\midrule
+\multicolumn{4}{c}{\textbf{\textit{Traditional machine learning methods}}} \\ 
+\midrule
+GFHF\cite{peng2022joint}      & 49.29/07.60 & GFK\cite{peng2022joint}  & 44.04/09.31          \\
+TCA\cite{peng2022joint}       & 37.01/10.47 & JDA\cite{peng2022joint}       & 54.57/05.47          \\
+GAKT\cite{peng2022joint}       & 58.49/06.23 & MIDA\cite{peng2022joint}       & 60.22/08.69          \\
+\midrule
+\multicolumn{4}{c}{\textit{\textbf{Deep learning methods}}}\\ 
+\midrule
+DANN\cite{li2022dynamic}  & 54.63/08.03&DAN \cite{li2022dynamic}                & 58.87/08.13\\
+MS-MDA\cite{2021MS}           & 59.34/05.48 & WGAN-GP\cite{2018WGAN}    & 60.60/15.76 \\\midrule
+\multicolumn{3}{l}{\textbf{MDDD}} & \textbf{60.94/08.84}  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}\subsection{Experimental Results on Cross-Subject Cross-Session}
+To evaluate the efficiency and stability of the proposed MDDD in managing variations in EEG data collected from the same subject at different times, we also conduct a model validation under the cross-subject cross-session leave-one-subject-out cross-validation protocol. The experimental results are reported in Table \ref{tab:seed_crosssession}, when different initial classifiers are used. The best model performance is achieved when Adaboost is adopted as the initial classifier, where the accuracy and F1-score are 76.60\\begin{table}[]
+\begin{center}
+\color{black}
+\caption{ross-subject cross-session leave-one-subject-out cross-validation on SEED with different initial classifiers.}
+\label{tab:seed_crosssession}
+\scalebox{1}
+{
+\begin{tabular}{lcccccc} 
+\toprule
+Classifier & KNN & SVM  & DT & Adaboost & GNB & Bagging   \\ 
+\midrule
+Accuracy & 74.79    & 75.98 & 76.44 & \textbf{76.60} &76.44 & 76.47 \\
+F1-score  & 60.88 & 64.67 & 65.28 & \textbf{65.43} & 65.28 &65.30  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}\begin{table}[]
+\begin{center}
+\caption{Performance comparison on SEED using cross-subject cross-session leave-one-subject-out cross-validation.}
+\label{tab:seed_crossCompare}
+\setlength{\tabcolsep}{3mm}
+\scalebox{1}{
+\color{black}
+\begin{tabular}{lclc}
+\toprule
+Methods   & $P_{acc}$   & Methods   & $P_{acc}$    \\ 
+\midrule
+\multicolumn{4}{c}{\textbf{\textit{Traditional machine learning methods}}} \\ 
+\midrule
+RF\cite{Breiman2001Random}      & 69.60/07.64 & KNN\cite{coomans1982alternative}     & 60.66/07.93           \\
+ SVM\cite{1999Least} & 68.15/07.38& Adaboost\cite{2009Multi} & 71.87/05.70\\ 
+TCA\cite{5640675}       & 64.02/07.96 & CORAL\cite{2015Return}      & 68.15/07.83          \\
+SA\cite{SA2013}        & 61.41/09.75 & GFK\cite{gong2012geodesic}       & 66.02/07.59          \\\midrule
+\multicolumn{4}{c}{\textit{\textbf{Deep learning methods}}}\\ 
+\midrule
+DCORAL\cite{sun2016deep}& 81.97/05.16 &DAN \cite{2015Learning}                & 81.04/05.32 \\
+DDC\cite{2014Deep}   & 82.17/04.96 &DANN\cite{2015Domain}           & 81.08/05.88 \\\midrule
+\multicolumn{3}{l}{\textbf{MDDD}} & \textbf{76.60/06.79}  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}
+For the SEED-IV database, we present the experimental results obtained with different initial classifiers using the cross-subject cross-session leave-one-subject-out cross-validation protocol in Table \ref{tab:seedIV_crossesession}. The performance across various initial classifiers is relatively consistent, with the highest accuracy reaching 64.90\
+\begin{table}[]
+\begin{center}
+\color{black}
+\caption{Cross-subject cross-session leave-one-subject-out cross-validation on SEED-IV with different initial classifiers.}
+\label{tab:seedIV_crossesession}
+\scalebox{1}
+{
+\begin{tabular}{lcccccc} 
+\toprule
+Classifier & KNN & SVM  & DT & Adaboost & GNB & Bagging   \\ 
+\midrule
+Accuracy & 64.55   & 64.55 & \textbf{64.90} &64.71&64.71 &64.71 \\
+F1-score  &53.09 & 53.09 & 52.20 & \textbf{53.20} & \textbf{53.20} & \textbf{53.20}  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}\begin{table}[]
+\begin{center}
+\caption{Performance comparison on SEED-IV using cross-subject cross-session leave-one-subject-out cross-validation.}
+\label{tab:seedIV_crossCompare}
+\setlength{\tabcolsep}{3mm}
+\scalebox{1}{
+\color{black}
+\begin{tabular}{lclc}
+\toprule
+Methods   & $P_{acc}$   & Methods   & $P_{acc}$    \\ 
+\midrule
+\multicolumn{4}{c}{\textbf{\textit{Traditional machine learning methods}}} \\ 
+\midrule
+RF\cite{Breiman2001Random}      & 50.98/09.20 & KNN\cite{coomans1982alternative}     & 40.83/07.28           \\
+ SVM\cite{li2018cross} & 51.78/12.85& Adaboost\cite{2009Multi} & 53.44/09.12\\ 
+TCA\cite{TCA2010}       & 56.56/13.77 & CORAL\cite{2015Return}      &49.44/09.09         \\
+SA\cite{2019A}        & 64.44/09.47 & GFK\cite{gong2012geodesic}       & 45.89/08.27         \\
+KPCA\cite{li2018cross} &51.76/12.89 & DNN\cite{li2018cross} &49.35/09.74\\
+\midrule
+\multicolumn{4}{c}{\textit{\textbf{Deep learning methods}}}\\ 
+\midrule
+DGCNN\cite{song2018eeg} & 52.82/09.23 &DAN \cite{li2018cross}                & 58.87/08.13\\
+Bi-DANN\cite{2018A}  & 65.59/10.39 &DANN\cite{li2018cross}           & 54.63/08.03 \\\midrule
+\multicolumn{3}{l}{\textbf{MDDD}} & \textbf{64.90/10.23}  \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+\end{table}\begin{table}
+\caption{Performance comparison using TCA and PCA.}
+\label{tab:seed_singlesession_TCA_vs_PCA}
+    \centering
+    \renewcommand{\arraystretch}{1}
+    \resizebox{\columnwidth}{!}{
+    \setlength{\tabcolsep}{10mm}{
+        \begin{tabular}{lcc}
+        \toprule
+        Methods & PCA  & TCA    \\ 
+        \midrule
+        Accuracy  & 52.93 & \textbf{84.57}  \\
+        F1-Score & 50.55 &\textbf{76.11}\\
+        \bottomrule
+        \end{tabular}}}
+\end{table}
+\begin{table}
+\caption{Performance comparison with different $\mu$ values.}
+\label{tab:seed_singlesession_different_mu}
+    \centering
+    \renewcommand{\arraystretch}{1}
+    \resizebox{\columnwidth}{!}{
+    \setlength{\tabcolsep}{4.5mm}{
+        \begin{tabular}{ccccc}
+        \toprule
+        $\mu$  &   0 & 0.5&1& dynamic   \\ 
+        \midrule
+        Accuracy & 78.57 &81.55&80.31&\textbf{84.57}\\
+        F1-Score &69.68&72.56&71.28&\textbf{76.11}\\
+        \bottomrule
+        \end{tabular}}}
+\end{table}
+\begin{table*}[!h]
+\centering
+\caption{Performance comparison without classifier learning and ensemble learning, with only classifier learning, and with both classifier learning and ensemble learning.}
+\label{tab:seed_singlesession_with_or_without_classifier_learning}
+\begin{adjustbox}{width=\textwidth}
+\renewcommand\arraystretch{1.2}
+\begin{tabular}{@{}cccccc@{}}
+\toprule
+Methods & without classifier learning and ensemble learning & with only classifier learning & with both classification learning and ensemble learning \\
+\midrule
+Accuracy & 44.73 & 79.66 & \textbf{84.57} \\
+F1-Score & 34.64 & 69.94 & \textbf{76.11} \\
+\bottomrule
+\end{tabular}
+\end{adjustbox}
+\end{table*}\begin{table}
+\caption{Performance comparison with different ensemble learning.}
+\label{tab:seed_singlesession_different_ensemble_learning}
+    \centering
+    \renewcommand{\arraystretch}{1}
+    \resizebox{\columnwidth}{!}{
+    \setlength{\tabcolsep}{4.5mm}{
+        \begin{tabular}{ccccc}
+        \toprule
+        Methods & Last & Averaging &Voting &LinkCluE  \\ 
+        \midrule
+        Accuracy &79.66&78.60&80.62&\textbf{84.57}\\
+        F1-Score &69.94&66.97&71.59&\textbf{76.11}\\
+        \bottomrule
+        \end{tabular}}}
+\end{table}\begin{table*}
+\caption{The parameter $\mu$ evolves during the iterative learning process.}
+\label{tab:seed_singlesession_changes_mu_in_10_iterations}
+    \centering
+    \scalebox{1}{
+    \renewcommand{\arraystretch}{1}
+    \setlength{\tabcolsep}{4mm}{
+        \begin{tabular}{ccccccccccc}
+        \toprule
+        Iterations &1& 2 &3 &4&5&6&7&8&9&10 \\ 
+        \midrule
+        $\mu$ &0.5715&0.6171&0.6115&0.6205 &0.6129 &0.6153 &0.6137 &0.6168 &0.6136 &0.6176\\
+        \bottomrule
+        \end{tabular}}}
+\end{table*}\section{Discussion}\subsection{Ablation Study}
+To comprehensively examine the contributions of the model components within the proposed MDDD framework, we conduct a thoroughly ablation study. Note here that all the presented experimental results in this section are based on the SEED database using cross-subject single-session leave-one-out cross-validation. The initial classifier is decision tree and the iterative loop is 10.To evaluate the efficacy of Transfer Component Analysis (TCA) in the manifold feature transformation, we assess the model performance by comparing the use of TCA against substituting TCA with Principal Component Analysis (PCA). As shown in Table \ref{tab:seed_singlesession_TCA_vs_PCA}, the model exhibits significantly better performance in terms of accuracy and F1-Score when comparing TCA with PCA. This improvement can be attributed to TCA's ability to enhance model performance by simultaneously mapping and reducing dimensions, and by maximizing the similarity between datasets from two domains. It would facilitate more effective dynamic distribution alignment and classifier categorization.To evaluate the effectiveness of dynamic distribution alignment, we opted for a fixed $\mu$ value approach, rather than using an adaptive $\mu$. The $\mu$ values are set at $0$, $0.5$, and $1$. At $\mu=0$, the model exclusively focuses on the marginal distribution. With $\mu=0.5$, both marginal and conditional distributions are considered equally. At $\mu=1$, the model solely emphasizes the conditional distribution. As reported in Table \ref{tab:seed_singlesession_different_mu}, it shows that employing an adaptive $\mu$ can significantly enhance model performance, resulting in a 4.26\Further, we examine the effectiveness of classifier learning and ensemble learning in the proposed MDDD. We compare the initial classification results and the classification results after iterative learning and ensemble learning, and report the comparison results in Table \ref{tab:seed_singlesession_with_or_without_classifier_learning}. The results reveal a significant reduction in all evaluation metrics, indicating the substantial impact of the classifier learning and ensemble learning process on enhancing model performance.
+\subsection{Impact of ensemble learning methods}To evaluate the impact of ensemble learning on model performance, we adjust our approach by incorporating various ensemble learning techniques, namely the averaging method, the voting method, and the LinkCLuE method. Note here that LinkCLuE is the method implemented in the proposed MDDD. Based on the obtained classification results in the classifier learning ($\hat{y}_t^{(\iota)}$ ($\iota=1,\cdots,10$)), the effectiveness of ensemble learning is analyzed. Furthermore, we drew comparisons to scenarios devoid of ensemble learning strategies by directly employing the final classification outcome from the last iteration loop in the classifier learning, denoted as $\hat{y}_t^{(\iota)}$ (with $\iota=10$), which serves as our baseline. The experimental comparison results are reported in Table \ref{tab:seed_singlesession_different_ensemble_learning}. It shows that ensemble learning with voting and LinkCluE could enhance the reliability of classification results and improve the overall performance. This confirms the effectiveness of ensemble algorithms. Furthermore, the LinkCLuE method outperforms the voting method, demonstrating a superior ability to synthesize classification outcomes across iterations and to discern the underlying patterns of the classification results.\subsection{Parameter effect}To examine the classifier learning process, we also investigate how sensitive the model is to changes in the number of iterations ($\iota$) in the learning process. Here, we vary $\iota$ value in a range of $[2,5,10,20,30,50]$, and present the corresponding learning results in Fig.\ref{fig:iteration_effect}. It shows the model's classification performance experiences fluctuations during the initial few iterations but achieves stability beyond $\iota=10$ iterations.Further, we explore how the $\mu$ value is adjusted during the learning process. {As shown in Table \ref{tab:seed_singlesession_changes_mu_in_10_iterations}}, the $\mu$ value dynamically adapts, taking into account the importance of both marginal and conditional distributions. It helps the learning process adapts to the internal structure of data and promotes a deeper understanding and representation of the data being processed.\begin{figure}[]
+\begin{center}
+\includegraphics[width=0.5\textwidth]{./iteration_acc_v6}
+\end{center}
+\caption{The emotion recognition accuracy (\
+\label{fig:iteration_effect}
+\end{figure}
